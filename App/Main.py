@@ -1,9 +1,15 @@
 import tkinter as tk
 from tkinter import font
+from tkinter import font, messagebox
+from algoritmo_genetico import lanzar_algoritmo_genetico
 
 # Funciones de cada botón (puedes modificar o enlazar con tus módulos)
 def abrir_geneticos():
-    print("Abrir módulo de Algoritmos Genéticos")
+    """Abrir módulo de algoritmo genético"""
+    try:
+        lanzar_algoritmo_genetico(ventana)
+    except Exception as e:
+        messagebox.showerror("Error", f"Error al abrir el módulo de Algoritmos Genéticos:\n{str(e)}")
 
 def abrir_naive_bayes():
     print("Abrir módulo de Naive Bayes")
