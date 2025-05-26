@@ -9,7 +9,12 @@ def abrir_naive_bayes():
     print("Abrir módulo de Naive Bayes")
 
 def abrir_redes_neuronales():
-    print("Abrir módulo de Redes Neuronales")
+    try:
+        import redes_neuronales
+        redes_neuronales.lanzar_minijuego(ventana)
+    except Exception as e:
+        from tkinter import messagebox
+        messagebox.showerror("Error", f"No se pudo abrir el módulo de Redes Neuronales:\n{e}")
 
 def salir_app():
     ventana.quit()

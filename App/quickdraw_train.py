@@ -2,9 +2,12 @@
 import numpy as np, tensorflow as tf, pathlib, random
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import pathlib
 
 CLASES = ["sun", "house", "tree", "cat", "fish"]
-DATA_PATH = pathlib.Path("data/quickdraw")
+
+BASE_DIR  = pathlib.Path(__file__).resolve().parent.parent   # ← sube un nivel (sale de App)
+DATA_PATH = BASE_DIR / "data" / "quickdraw"
 IMG_SIZE = 28 * 28
 SAMPLES_PER_CLASS = 6000          # para que entrene rápido
 
