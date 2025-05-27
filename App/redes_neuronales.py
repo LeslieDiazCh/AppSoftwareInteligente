@@ -15,15 +15,24 @@ RADIUS = 8
 # Cargar modelo
 modelo = tf.keras.models.load_model(MODELO_PATH)
 
+def centrar_ventana(ventana, ancho, alto):
+    ventana.update_idletasks()
+    sw = ventana.winfo_screenwidth()
+    sh = ventana.winfo_screenheight()
+    x = int((sw / 2) - (ancho / 2))
+    y = int((sh / 2) - (alto / 2))
+    ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+
+
 def lanzar_minijuego(ventana_principal=None):
     if ventana_principal:
         ventana_principal.withdraw()
 
-    juego = tk.Toplevel()
+    juego = tk.Tk()
     juego.title("Minijuego · Adivina el Dibujo")
-    juego.geometry("500x640")
     juego.configure(bg="#f0f4f8")
     juego.resizable(False, False)
+    centrar_ventana(juego, 500, 640)
 
     juego.focus_force()
     juego.grab_set()
@@ -138,7 +147,7 @@ def lanzar_minijuego(ventana_principal=None):
     resultado_lbl.pack(pady=15)
 
     tk.Button(juego, text="Salir", command=salir_y_regresar,
-              bg="#d63031", activebackground="#c0392b", **estilo_boton).pack(pady=10)
+              bg="#d63031", activebackground="#c0392b", **estilo_boton).pack(pady=5)
 
     actualizar_marcador()
     nuevo_objetivo()
