@@ -5,10 +5,16 @@ import numpy as np
 import tensorflow as tf
 import random
 import pathlib
+import sys
+
 
 # Configuración
 CLASES = ["Sol", "Casa", "Árbol", "Gato", "Pez"]
-MODELO_PATH = pathlib.Path(__file__).resolve().parent.parent / "modelos" / "quickdraw_mlp.h5"
+
+
+BASE_PATH = getattr(sys, '_MEIPASS', pathlib.Path(__file__).resolve().parent.parent)
+MODELO_PATH = BASE_PATH / "modelos" / "quickdraw_mlp.h5"
+
 IMG_CANVAS = 280
 RADIUS = 8
 
