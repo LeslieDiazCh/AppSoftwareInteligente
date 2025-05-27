@@ -1,4 +1,3 @@
-# quickdraw_train.py
 import numpy as np, tensorflow as tf, pathlib, random
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
