@@ -10,6 +10,18 @@ import numpy as np
 import threading
 import time
 
+
+
+def centrar_ventana(ventana, ancho, alto):
+    ventana.update_idletasks()
+    sw = ventana.winfo_screenwidth()
+    sh = ventana.winfo_screenheight()
+    x = int((sw / 2) - (ancho / 2))
+    y = int((sh / 2) - (alto / 2))
+    ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+
+
+
 class AlgoritmoGenetico:
     def __init__(self):
         self.mapa_puntos = []
@@ -22,6 +34,7 @@ class AlgoritmoGenetico:
     def crear_ventana(self, ventana_padre):
         """Crear la ventana del algoritmo genético"""
         self.ventana = tk.Toplevel(ventana_padre)
+        centrar_ventana(self.ventana, 1200, 800)
         self.ventana.title("Algoritmo Genético - Problema del Viajero")
         self.ventana.geometry("1200x800")
         self.ventana.configure(bg="#f0f4f8")

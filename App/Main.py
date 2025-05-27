@@ -21,11 +21,18 @@ def mostrar_ventana_carga(texto="Cargando...", duracion=2500):
 
 # Funciones de cada botón
 def abrir_geneticos():
-    """Abrir módulo de algoritmo genético"""
+    carga = mostrar_ventana_carga("Cargando Algoritmo Genético...")
+    ventana.after(200, lambda: cargar_geneticos(carga))
+
+def cargar_geneticos(carga):
     try:
+        from algoritmo_genetico import lanzar_algoritmo_genetico
         lanzar_algoritmo_genetico(ventana)
     except Exception as e:
-        messagebox.showerror("Error", f"Error al abrir el módulo de Algoritmos Genéticos:\n{str(e)}")
+        from tkinter import messagebox
+        messagebox.showerror("Error", f"No se pudo abrir Algoritmos Genéticos:\n{e}")
+    finally:
+        carga.destroy()
 
 def abrir_naive_bayes():
     carga = mostrar_ventana_carga("Cargando Naive Bayes...")

@@ -147,7 +147,7 @@ def lanzar_minijuego(ventana_principal=None):
     resultado_lbl.pack(pady=15)
 
     tk.Button(juego, text="Salir", command=salir_y_regresar,
-              bg="#d63031", activebackground="#c0392b", **estilo_boton).pack(pady=5)
+              bg="#d63031", activebackground="#c0392b", **estilo_boton).pack(pady=2)
 
     actualizar_marcador()
     nuevo_objetivo()
