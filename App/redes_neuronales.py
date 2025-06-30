@@ -13,7 +13,7 @@ CLASES = ["Sol", "Casa", "Árbol", "Gato", "Pez"]
 
 
 BASE_PATH = getattr(sys, '_MEIPASS', pathlib.Path(__file__).resolve().parent.parent)
-MODELO_PATH = BASE_PATH / "modelos" / "quickdraw_mlp.h5"
+MODELO_PATH = BASE_PATH / "data" / "quickdraw_mlp.h5"
 
 IMG_CANVAS = 280
 RADIUS = 8
