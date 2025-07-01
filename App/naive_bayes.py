@@ -5,7 +5,6 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import random
-import subprocess
 import sys
 
 # === ENTRENAMIENTO ===

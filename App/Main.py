@@ -1,8 +1,54 @@
-import tkinter as tk
+import subprocess
 import sys
+import os
+import importlib.util
+
+# Configuración de entorno Tcl/Tk
+tcl_path = r"C:\Users\Hermann\AppData\Local\Programs\Python\Python311\tcl"
+os.environ['TCL_LIBRARY'] = os.path.join(tcl_path, 'tcl8.6')
+os.environ['TK_LIBRARY'] = os.path.join(tcl_path, 'tk8.6')
+
+def esta_instalada(lib):
+    return importlib.util.find_spec(lib) is not None
+
+def verificar_e_instalar_dependencias():
+    paquetes = {
+        "pandas": "pandas",
+        "numpy": "numpy",
+        "matplotlib": "matplotlib",
+        "scikit-learn": "sklearn",
+        "tensorflow": "tensorflow",
+        "pillow": "PIL",
+        "tqdm": "tqdm",
+        "spacy": "spacy",
+        "openpyxl": "openpyxl"
+    }
+
+    faltantes = [paquete for paquete, modulo in paquetes.items() if not esta_instalada(modulo)]
+
+    if faltantes:
+        print(f"📦 Instalando {len(faltantes)} paquetes: {', '.join(faltantes)}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *faltantes])
+
+    try:
+        import spacy
+        spacy.load("es_core_news_md")
+    except (ImportError, OSError):
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", "es_core_news_md"])
+
+    try:
+        import tkinter
+    except ImportError:
+        raise SystemExit("Instala Python con soporte Tcl/Tk desde https://www.python.org/downloads/")
+
+verificar_e_instalar_dependencias()
+
+# ---------------- MENÚ PRINCIPAL ----------------
+
+import tkinter as tk
 from tkinter import font, messagebox
 
-def mostrar_ventana_carga(texto="Cargando...", duracion=2500):
+def mostrar_ventana_carga(texto="Cargando..."):
     carga = tk.Toplevel()
     carga.title("")
     carga.geometry("300x100")
@@ -13,92 +59,41 @@ def mostrar_ventana_carga(texto="Cargando...", duracion=2500):
     carga.update()
     return carga
 
-def abrir_geneticos():
-    carga = mostrar_ventana_carga("Cargando Algoritmo Genético...")
-    ventana.after(200, lambda: cargar_geneticos(carga))
+def abrir_modulo(nombre, funcion):
+    carga = mostrar_ventana_carga(f"Cargando {nombre}...")
+    ventana.after(200, lambda: cargar_modulo(funcion, carga))
 
-def cargar_geneticos(carga):
+def cargar_modulo(funcion, carga):
     try:
-        from algoritmo_genetico import lanzar_algoritmo_genetico
-        lanzar_algoritmo_genetico(ventana)
+        funcion()
     except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir Algoritmos Genéticos:\n{e}")
-    finally:
-        carga.destroy()
-
-def abrir_naive_bayes():
-    carga = mostrar_ventana_carga("Cargando Naive Bayes...")
-    ventana.after(200, lambda: cargar_naive_bayes(carga))
-
-def cargar_naive_bayes(carga):
-    try:
-        import naive_bayes
-        naive_bayes.lanzar_minijuego(ventana)
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir Naive Bayes:\n{e}")
-    finally:
-        carga.destroy()
-
-def abrir_redes_neuronales():
-    carga = mostrar_ventana_carga("Cargando Redes Neuronales...")
-    ventana.after(200, lambda: cargar_redes(carga))
-
-def cargar_redes(carga):
-    try:
-        import redes_neuronales
-        redes_neuronales.lanzar_minijuego(ventana)
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir el módulo de Redes Neuronales:\n{e}")
-    finally:
-        carga.destroy()
-
-def abrir_clustering():
-    carga = mostrar_ventana_carga("Cargando Clustering...")
-    ventana.after(200, lambda: cargar_clustering(carga))
-
-def cargar_clustering(carga):
-    try:
-        import clustering
-        clustering.lanzar_clustering(ventana)
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir la Aplicación de Clustering:\n{e}")
-    finally:
-        carga.destroy()
-
-
-def cargar_clustering(carga):
-    try:
-        import clustering
-        clustering.lanzar_clustering(ventana)
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir la Aplicación de Clustering:\n{e}")
+        messagebox.showerror("Error", f"No se pudo abrir el módulo:\n{e}")
     finally:
         carga.destroy()
 
 def abrir_transfer_learning():
-    carga = mostrar_ventana_carga("Cargando Transfer Learning...")
-    ventana.after(200, lambda: cargar_transfer_learning(carga))
+    abrir_modulo("Transfer Learning", lambda: __import__("transferlearning").lanzar_transfer_learning(ventana))
 
-def cargar_transfer_learning(carga):
-    try:
-        import transferlearning
-        transferlearning.lanzar_transfer_learning(ventana)
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo abrir el módulo de Transfer Learning:\n{e}")
-    finally:
-        carga.destroy()
+def abrir_naive_bayes():
+    abrir_modulo("Naive Bayes", lambda: __import__("naive_bayes").lanzar_minijuego(ventana))
+
+def abrir_redes_neuronales():
+    abrir_modulo("Redes Neuronales", lambda: __import__("redes_neuronales").lanzar_minijuego(ventana))
+
+def abrir_clustering():
+    abrir_modulo("Clustering", lambda: __import__("clustering").lanzar_clustering(ventana))
+
+def abrir_geneticos():
+    abrir_modulo("Algoritmo Genético", lambda: __import__("algoritmo_genetico").lanzar_algoritmo_genetico(ventana))
 
 def salir_app():
     ventana.destroy()
-    sys.exit(0)  # Mata el proceso sin condiciones
-
+    sys.exit(0)
 
 def centrar_ventana(ventana, ancho, alto):
     ventana.update_idletasks()
-    pantalla_ancho = ventana.winfo_screenwidth()
-    pantalla_alto = ventana.winfo_screenheight()
-    x = int((pantalla_ancho / 2) - (ancho / 2))
-    y = int((pantalla_alto / 2) - (alto / 2))
+    x = (ventana.winfo_screenwidth() - ancho) // 2
+    y = (ventana.winfo_screenheight() - alto) // 2
     ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
 
 def lanzar_menu():
@@ -137,5 +132,6 @@ def lanzar_menu():
 
     ventana.mainloop()
 
+# Lanza el menú
 if __name__ == "__main__":
     lanzar_menu()
