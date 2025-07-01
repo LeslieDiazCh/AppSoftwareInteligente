@@ -1,4 +1,5 @@
 import tkinter as tk
+import sys
 from tkinter import font, messagebox
 
 def mostrar_ventana_carga(texto="Cargando...", duracion=2500):
@@ -80,15 +81,17 @@ def abrir_transfer_learning():
 
 def cargar_transfer_learning(carga):
     try:
-        import quickdraw_train
-        quickdraw_train.lanzar_transfer_learning(ventana)
+        import transferlearning
+        transferlearning.lanzar_transfer_learning(ventana)
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo abrir el módulo de Transfer Learning:\n{e}")
     finally:
         carga.destroy()
 
 def salir_app():
-    ventana.quit()
+    ventana.destroy()
+    sys.exit(0)  # Mata el proceso sin condiciones
+
 
 def centrar_ventana(ventana, ancho, alto):
     ventana.update_idletasks()

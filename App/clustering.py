@@ -1,158 +1,148 @@
 import tkinter as tk
-
-from tkinter import filedialog, messagebox
+import os, io
+import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
-from sklearn.metrics import silhouette_score, davies_bouldin_score
-from sklearn.decomposition import PCA
-import pandas as pd
-from textwrap import dedent
+from sklearn.metrics import silhouette_score
+
+# Evita conflictos con Tkinter
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import os
 
-ruta_absoluta = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/audio_dataset.xlsx"))
+from PIL import Image, ImageTk
+from textwrap import dedent
 
-def centrar_ventana(ventana, ancho, alto):
-    ventana.update_idletasks()
-    pantalla_ancho = ventana.winfo_screenwidth()
-    pantalla_alto = ventana.winfo_screenheight()
-    x = int((pantalla_ancho / 2) - (ancho / 2))
-    y = int((pantalla_alto / 2) - (alto / 2))
-    ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+# Ruta al archivo CSV
+BASE_DIR = os.path.dirname(__file__)
+CSV_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "data", "customers.csv"))
 
-def graficar_tipos_reales(df):
-    x = df["tempo_bpm"]
-    y = df["rms"]
-    etiquetas = df["y"]
+# Colores y etiquetas
+COLORS = {0: "#ff5252", 1: "#2979ff", 2: "#ffd54f", -1: "#7f8c8d"}
+LABELS = {
+    0: "Ahorradores",
+    1: "Grandes consumidores",
+    2: "Premium prudentes",
+    -1: "Ruido"
+}
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    etiquetas_unicas = etiquetas.unique()
-    colores = plt.cm.tab10(range(len(etiquetas_unicas)))
+def _ordenar_por_ingreso(x_raw, y_lab):
+    clusters = [k for k in np.unique(y_lab) if k != -1]
+    medios = {k: x_raw[y_lab == k, 0].mean() for k in clusters}
+    mapping = {k: rank for rank, k in enumerate(sorted(medios, key=medios.get))}
+    return np.array([mapping.get(lbl, -1) for lbl in y_lab])
 
-    for i, etiqueta in enumerate(etiquetas_unicas):
-        idx = etiquetas == etiqueta
-        ax.scatter(x[idx], y[idx], label=etiqueta, color=colores[i], s=40, alpha=0.8)
+def lanzar_clustering(parent):
+    if not os.path.exists(CSV_PATH):
+        tk.messagebox.showerror("Error", f"No se encontró el archivo:\n{CSV_PATH}")
+        return
 
-    ax.set_title("Dispersión según tipo de audio (real)")
-    ax.set_xlabel("Tempo (BPM)")
-    ax.set_ylabel("RMS")
-    ax.grid(True)
-    ax.legend(title="Etiqueta real")
-    plt.tight_layout()
-    plt.show()
+    win = tk.Toplevel(parent)
+    win.title("Segmentación de clientes – Ingreso vs Gasto")
+    win.state("zoomed")
 
-def lanzar_clustering(ventana_padre):
-    ventana = tk.Toplevel(ventana_padre)
-    ventana.title("Análisis de Clustering de Audios")
-    ventana.geometry("800x600")
-    ventana.configure(bg="white")
-    centrar_ventana(ventana, 800, 600)
+    # Widgets
+    btn = tk.Button(win, text="Comparar algoritmos",
+                    bg="#00b894", fg="white", font=("Helvetica", 12),
+                    relief="flat")
+    btn.pack(pady=12)
 
-    frame = tk.Frame(ventana)
-    frame.pack(fill="both", expand=True, padx=10, pady=10)
+    lbl_fig = tk.Label(win, bg="white")
+    lbl_fig.pack(pady=10)
 
-    text_box = tk.Text(frame, wrap="word", font=("Courier", 10), bg="#f8f9fa")
-    text_box.pack(side="left", fill="both", expand=True)
+    txt = tk.Text(win, wrap="word", font=("Courier", 10),
+                  bg="#f8f9fa", height=8)
+    txt.pack(fill="both", expand=True, padx=10, pady=10)
+    txt.insert("1.0", "Pulsa el botón para generar la comparación.")
+    txt.configure(state="disabled")
 
-    scrollbar = tk.Scrollbar(frame, command=text_box.yview)
-    scrollbar.pack(side="right", fill="y")
-    text_box.config(yscrollcommand=scrollbar.set)
+    def ejecutar():
+        df = pd.read_csv(CSV_PATH)
+        X_raw = df.iloc[:, :2].values
+        X_scaled = StandardScaler().fit_transform(X_raw)
 
-    def mostrar_resultado(texto):
-        text_box.config(state="normal")
-        text_box.delete("1.0", tk.END)
-        text_box.insert(tk.END, texto)
-        text_box.config(state="disabled")
+        modelos = {
+            "K-Means": KMeans(n_clusters=3, random_state=0),
+            "Ward": AgglomerativeClustering(n_clusters=3, linkage="ward"),
+            "DBSCAN": DBSCAN(eps=0.3, min_samples=20)
+        }
 
-    def ejecutar_analisis(ruta_entrada):
-        try:
-            if not ruta_entrada or not os.path.exists(ruta_entrada):
-                raise FileNotFoundError(f"No se encontró: {ruta_entrada}")
-            df = pd.read_excel(ruta_entrada)
+        resultados = {}
+        for nombre, modelo in modelos.items():
+            lab = modelo.fit_predict(X_scaled)
+            lab = _ordenar_por_ingreso(X_raw, lab)
+            resultados[nombre] = lab
 
-            columnas_necesarias = ["duration_s", "rms", "tempo_bpm", "zcr"]
-            if not all(col in df.columns for col in columnas_necesarias):
-                raise ValueError(f"Faltan columnas necesarias: {columnas_necesarias}")
-
-            graficar_tipos_reales(df)
-
-            X = StandardScaler().fit_transform(df[columnas_necesarias])
-
-            resultados = {}
-            resultados["K-means"] = KMeans(n_clusters=4, random_state=42, n_init="auto").fit_predict(X)
-            resultados["Ward"] = AgglomerativeClustering(n_clusters=4, linkage="ward").fit_predict(X)
-
-            for eps in (0.3, 0.5, 0.7, 1.0):
-                etiquetas = DBSCAN(eps=eps, min_samples=4).fit_predict(X)
-                n_cls = len(set(etiquetas)) - (1 if -1 in etiquetas else 0)
-                if n_cls >= 3:
-                    resultados["DBSCAN"] = etiquetas
+        if len(set(resultados["DBSCAN"])) < 3:
+            for eps in (0.35, 0.4, 0.45):
+                lab = DBSCAN(eps=eps, min_samples=20).fit_predict(X_scaled)
+                lab = _ordenar_por_ingreso(X_raw, lab)
+                if len(set(lab)) >= 2:
+                    resultados["DBSCAN"] = lab
                     break
 
-            pca = PCA(n_components=2)
-            X_reducido = pca.fit_transform(X)
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        for ax, (alg, lab) in zip(axes, resultados.items()):
+            for k in np.unique(lab):
+                idx = lab == k
+                ax.scatter(X_raw[idx, 0], X_raw[idx, 1],
+                           c=COLORS[k], s=22, edgecolors="k",
+                           linewidths=0.25, label=LABELS[k])
+            if len(set(lab)) > 1:
+                sil = silhouette_score(X_scaled, lab)
+                ax.set_title(f"{alg}  (Sil = {sil:.2f})", fontsize=10)
+            else:
+                ax.set_title(f"{alg}  (un solo clúster)", fontsize=10)
+            ax.set_xlabel("Ingreso anual (USD)")
+            ax.set_ylabel("Puntaje de gasto")
+            ax.legend(fontsize=7, frameon=False)
+            ax.grid(alpha=0.25)
 
-            fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-            for ax, (nombre, etiquetas) in zip(axes, resultados.items()):
-                scatter = ax.scatter(X_reducido[:, 0], X_reducido[:, 1], c=etiquetas, cmap='tab10', s=40)
-                ax.set_title(nombre)
-                ax.set_xlabel("PCA 1")
-                ax.set_ylabel("PCA 2")
-                ax.grid(True)
-            plt.tight_layout()
-            plt.show()
+        plt.suptitle("Clientes por ingreso vs gasto – comparación de algoritmos", fontsize=13)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.93])
 
-            metricas = {}
-            for nombre, etiquetas in resultados.items():
-                sil = silhouette_score(X, etiquetas)
-                dbi = davies_bouldin_score(X, etiquetas)
-                metricas[nombre] = {"silhouette": sil, "dbi": dbi}
+        # Mostrar imagen
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", bbox_inches="tight")
+        buf.seek(0)
+        img = Image.open(buf)
+        max_w = int(win.winfo_screenwidth() * 0.9)
+        if img.width > max_w:
+            ratio = max_w / img.width
+            img = img.resize((max_w, int(img.height * ratio)), Image.Resampling.LANCZOS)
 
-            mejor = max(metricas.items(), key=lambda t: t[1]["silhouette"])[0]
+        photo = ImageTk.PhotoImage(img, master=win)
 
-            resumen = "\n=== Métricas comparativas ===\n"
-            resumen += f"{'Algoritmo':10}  Silhouette   Davies-B.\n"
-            for nombre, m in metricas.items():
-                resumen += f"{nombre:10}  {m['silhouette']:.3f}       {m['dbi']:.3f}\n"
+        def mostrar_imagen():
+            lbl_fig.configure(image=photo)
+            lbl_fig.image = photo  # 🔒 mantiene viva la imagen
 
-            justificacion = dedent(f"""
-            ──────────────────────────────────────────────────────────
-            Selección del algoritmo óptimo
-            ──────────────────────────────────────────────────────────
-            • {mejor} obtiene el mayor coeficiente Silhouette y el menor
-              índice Davies–Bouldin, lo que significa clústeres más
-              compactos y mejor separados.
+        win.after(10, mostrar_imagen)  # ⏱ evita error pyimage
 
-            • El dominio del problema exige exactamente 4 categorías
-              (emociones previstas). {mejor} se alinea con ese supuesto
-              sin necesidad de ajustar parámetros complejos.
+        explicacion = dedent("""
+            Leyenda de colores:
+                🔴 Ahorradores | 🔵 Grandes consumidores
+                🟡 Premium prudentes | ❌ Ruido/atípicos
 
-            • Los centroides/resultados de {mejor} se interpretan
-              fácilmente: un clúster con alto rms y alto tempo se
-              asocia a “Enojado”, etc. Ward ofrece estructura útil
-              para exploración y DBSCAN destaca outliers, pero ninguno
-              supera a {mejor} en cohesión + simplicidad de despliegue.
+            • K-Means: parte los grupos por líneas rectas equidistantes.
+            • Ward: curva los límites pero aún mezcla algo de ruido.
+            • DBSCAN: detecta los núcleos densos completos y marca fuera
+              de clúster a los compradores aislados.
 
-            Con base en las métricas objetivas y la adecuación al
-            objetivo práctico, **{mejor} es el algoritmo recomendado**.
-            """)
-            mostrar_resultado(resumen + "\n" + justificacion)
+            Para campañas segmentadas donde interesa mantener limpio cada
+            grupo y detectar outliers, DBSCAN es la mejor opción.
+        """)
+        txt.configure(state="normal")
+        txt.delete("1.0", tk.END)
+        txt.insert(tk.END, explicacion)
+        txt.configure(state="disabled")
 
-        except Exception as e:
-            mostrar_resultado(f"⚠️ Error:\n{str(e)}")
+    btn.configure(command=ejecutar)
 
-    tk.Button(ventana, text="Ejecutar con archivo por defecto",
-              command=lambda: ejecutar_analisis(ruta_absoluta),
-              bg="#0984e3", fg="white", font=("Helvetica", 11), relief="flat").pack(pady=10)
-
-    tk.Button(ventana, text="Seleccionar otro archivo .xlsx",
-              command=lambda: ejecutar_analisis(filedialog.askopenfilename(filetypes=[("Excel", "*.xlsx")])),
-              bg="#636e72", fg="white", font=("Helvetica", 10), relief="flat").pack(pady=5)
-
-    mostrar_resultado("Presiona un botón para ejecutar el análisis.")
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()
-    lanzar_clustering(root)
-    root.mainloop()
+    # Centrado dentro del padre
+    parent.update_idletasks()
+    w, h = parent.winfo_width(), parent.winfo_height()
+    x = parent.winfo_rootx() + (w - win.winfo_reqwidth()) // 2
+    y = parent.winfo_rooty() + (h - win.winfo_reqheight()) // 2
+    win.geometry(f"+{x}+{y}")
